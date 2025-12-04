@@ -10,12 +10,12 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// ⚙️ Config sécurisée via variables d'environnement
+// Config sécurisée via variables d'environnement
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-session-secret';
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
 
-// 📦 "Base de données" en mémoire (simulation)
+// "Base de données" en mémoire (simulation)
 const db = {
   users: [],
   products: [],
@@ -23,10 +23,10 @@ const db = {
   reviews: []
 };
 
-// 🧂 Paramètre de hashage pour les mots de passe
+// Paramètre de hashage pour les mots de passe
 const SALT_ROUNDS = 10;
 
-// 🔐 Seed des utilisateurs avec mots de passe hashés
+// Seed des utilisateurs avec mots de passe hashés
 db.users.push({
   id: 1,
   username: 'admin',
@@ -43,7 +43,7 @@ db.users.push({
   role: 'customer'
 });
 
-// 🛒 Produits de démo
+// Produits de démo
 db.products = [
   { id: 1, name: 'Laptop HP', price: 799, stock: 10, category: 'electronics' },
   { id: 2, name: 'iPhone 14', price: 999, stock: 15, category: 'electronics' },
@@ -51,7 +51,7 @@ db.products = [
   { id: 4, name: 'Chaussures Adidas', price: 89, stock: 30, category: 'clothing' }
 ];
 
-// 🌍 CORS (restreint au frontend)
+// CORS (restreint au frontend)
 app.use(
   cors({
     origin: FRONTEND_ORIGIN,
@@ -59,33 +59,41 @@ app.use(
   })
 );
 
-// 🧾 Parsing JSON avec taille limitée
+// Parsing JSON avec taille limitée
 app.use(bodyParser.json({ limit: '1mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// 🍪 Session (utilisée uniquement pour de la démo)
 app.use(
   session({
+    // Nom de cookie custom (évite le nom par défaut)
+    name: 'ecom_session',
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // à passer à true derrière un HTTPS reverse proxy
+      // En prod : cookie uniquement via HTTPS
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000
+      // Durée de vie
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      // Chemin + domaine explicitement définis
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || 'localhost'
     }
   })
 );
 
-// 🧹 Fonction utilitaire pour ne pas renvoyer les champs sensibles
+
+// Fonction utilitaire pour ne pas renvoyer les champs sensibles
 function sanitizeUser(user) {
   if (!user) return null;
   const { password, apiKey, creditCard, ...safe } = user;
   return safe;
 }
 
-// 🔐 Middleware d’authentification JWT
+// Middleware d’authentification JWT
 function authenticateJWT(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -104,7 +112,7 @@ function authenticateJWT(req, res, next) {
   });
 }
 
-// 🔐 Middleware d’autorisation admin
+// Middleware d’autorisation admin
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Accès réservé à l’admin' });
@@ -112,12 +120,12 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// 💚 Healthcheck
+// Healthcheck
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
 });
 
-// 🔍 Recherche de produits SANS eval()
+// Recherche de produits SANS eval()
 app.get('/api/products/search', (req, res) => {
   const query = (req.query.q || '').toLowerCase().trim();
 
@@ -128,7 +136,7 @@ app.get('/api/products/search', (req, res) => {
   res.json(results);
 });
 
-// 🧾 Enregistrement utilisateur (avec hashage)
+// Enregistrement utilisateur (avec hashage)
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, email } = req.body;
@@ -171,7 +179,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// 🔐 Login sécurisé (sans bypass, avec bcrypt)
+// Login sécurisé (sans bypass, avec bcrypt)
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -221,7 +229,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 👤 Récupérer le profil de l’utilisateur courant
+// Récupérer le profil de l’utilisateur courant
 app.get('/api/users/me', authenticateJWT, (req, res) => {
   const user = db.users.find((u) => u.id === req.user.id);
   if (!user) {
@@ -230,12 +238,12 @@ app.get('/api/users/me', authenticateJWT, (req, res) => {
   res.json(sanitizeUser(user));
 });
 
-// 👥 Liste de tous les utilisateurs (admin uniquement)
+// Liste de tous les utilisateurs (admin uniquement)
 app.get('/api/users', authenticateJWT, requireAdmin, (req, res) => {
   res.json(db.users.map(sanitizeUser));
 });
 
-// 👤 Détail d’un utilisateur par ID (admin uniquement)
+// Détail d’un utilisateur par ID (admin uniquement)
 app.get('/api/users/:id', authenticateJWT, requireAdmin, (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
@@ -248,7 +256,7 @@ app.get('/api/users/:id', authenticateJWT, requireAdmin, (req, res) => {
   }
 });
 
-// ⭐ Ajouter un avis produit (auth requis)
+// Ajouter un avis produit (auth requis)
 app.post('/api/products/:id/review', authenticateJWT, (req, res) => {
   const productId = parseInt(req.params.id, 10);
   const { rating, comment } = req.body;
@@ -280,19 +288,19 @@ app.post('/api/products/:id/review', authenticateJWT, (req, res) => {
   });
 });
 
-// ⭐ Récupérer les avis d’un produit
+// Récupérer les avis d’un produit
 app.get('/api/products/:id/reviews', (req, res) => {
   const productId = parseInt(req.params.id, 10);
   const productReviews = db.reviews.filter((r) => r.productId === productId);
   res.json(productReviews);
 });
 
-// 📦 Liste des produits (publique)
+// Liste des produits (publique)
 app.get('/api/products', (req, res) => {
   res.json(db.products);
 });
 
-// 💳 Checkout (auth obligatoire, pas de stockage de carte en clair)
+// Checkout (auth obligatoire, pas de stockage de carte en clair)
 app.post('/api/checkout', authenticateJWT, (req, res) => {
   const { productId, quantity } = req.body;
 
@@ -320,7 +328,7 @@ app.post('/api/checkout', authenticateJWT, (req, res) => {
     quantity: qty,
     total: product.price * qty,
     date: new Date()
-    // 🔒 Aucune carte bancaire stockée
+    // Aucune carte bancaire stockée
   };
 
   db.orders.push(order);
@@ -331,7 +339,7 @@ app.post('/api/checkout', authenticateJWT, (req, res) => {
   });
 });
 
-// 📊 Stats admin (protégées)
+// Stats admin (protégées)
 app.get('/api/admin/stats', authenticateJWT, requireAdmin, (req, res) => {
   res.json({
     totalUsers: db.users.length,
@@ -342,11 +350,11 @@ app.get('/api/admin/stats', authenticateJWT, requireAdmin, (req, res) => {
   });
 });
 
-// 📁 Lecture de fichiers avec protection contre le path traversal (admin only)
+// Lecture de fichiers avec protection contre le path traversal (admin only)
 app.get('/api/files/:filename', authenticateJWT, requireAdmin, (req, res) => {
-  const uploadsDir = path.join(__dirname, 'uploads');
+  const uploadsDir = path.resolve(__dirname, 'uploads');
   const safeName = path.basename(req.params.filename);
-  const filePath = path.join(uploadsDir, safeName);
+  const filePath = path.resolve(uploadsDir, safeName);
 
   if (!filePath.startsWith(uploadsDir)) {
     return res.status(400).json({ message: 'Chemin de fichier invalide' });
@@ -364,9 +372,10 @@ app.get('/api/files/:filename', authenticateJWT, requireAdmin, (req, res) => {
   });
 });
 
-// ❌ Suppression de /api/debug (ne doit pas exister en prod)
 
-// 🏠 Endpoint racine
+// Suppression de /api/debug (ne doit pas exister en prod)
+
+//  Endpoint racine
 app.get('/', (req, res) => {
   res.json({
     message: 'E-Commerce API (version sécurisée)',
