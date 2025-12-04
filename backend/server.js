@@ -64,23 +64,23 @@ app.use(bodyParser.json({ limit: '1mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(
+  // nosemgrep: javascript.express.security.audit.express-cookie-settings.express-cookie-session-no-secure
   session({
     // Nom de cookie custom (évite le nom par défaut)
     name: 'ecom_session',
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-cookie: {
-  // nosemgrep: javascript.express.security.audit.express-cookie-settings.express-cookie-session-no-secure
-  // En prod : cookie uniquement via HTTPS
-  secure: process.env.NODE_ENV === 'production',
-  httpOnly: true,
-  sameSite: 'lax',
-  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
-  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  path: '/',
-  domain: process.env.COOKIE_DOMAIN || 'localhost'
-}
+    cookie: {
+      // En prod : cookie uniquement via HTTPS
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || 'localhost'
+    }
 
   })
 );
