@@ -70,7 +70,7 @@ app.use(
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: {
+cookie: {
   // nosemgrep: javascript.express.security.audit.express-cookie-settings.express-cookie-session-no-secure
   // En prod : cookie uniquement via HTTPS
   secure: process.env.NODE_ENV === 'production',
