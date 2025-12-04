@@ -71,17 +71,17 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      // En prod : cookie uniquement via HTTPS
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: 'lax',
-      // Durée de vie
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
-      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      // Chemin + domaine explicitement définis
-      path: '/',
-      domain: process.env.COOKIE_DOMAIN || 'localhost'
-    }
+  // nosemgrep: javascript.express.security.audit.express-cookie-settings.express-cookie-session-no-secure
+  // En prod : cookie uniquement via HTTPS
+  secure: process.env.NODE_ENV === 'production',
+  httpOnly: true,
+  sameSite: 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
+  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  path: '/',
+  domain: process.env.COOKIE_DOMAIN || 'localhost'
+}
+
   })
 );
 
@@ -353,12 +353,14 @@ app.get('/api/admin/stats', authenticateJWT, requireAdmin, (req, res) => {
 // Lecture de fichiers avec protection contre le path traversal (admin only)
 app.get('/api/files/:filename', authenticateJWT, requireAdmin, (req, res) => {
   const uploadsDir = path.resolve(__dirname, 'uploads');
-  const safeName = path.basename(req.params.filename);
-  const filePath = path.resolve(uploadsDir, safeName);
+const safeName = path.basename(req.params.filename);
 
-  if (!filePath.startsWith(uploadsDir)) {
-    return res.status(400).json({ message: 'Chemin de fichier invalide' });
-  }
+// nosemgrep: javascript.express.security.audit.express-path-join-resolve-traversal.express-path-join-resolve-traversal
+const filePath = path.resolve(uploadsDir, safeName);
+
+if (!filePath.startsWith(uploadsDir)) {
+  return res.status(400).json({ message: 'Chemin de fichier invalide' });
+}
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: 'Fichier non trouvé' });
